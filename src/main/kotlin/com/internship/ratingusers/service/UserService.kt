@@ -1,5 +1,11 @@
 package com.internship.ratingusers.service
 
-interface UserService {
+import com.google.firebase.auth.UserRecord
 
+interface UserService {
+    fun register(email: String?, password: String?)
+
+    fun writeToDatabase(userRecord: UserRecord)
+
+    fun assignRole(uid: String?, role: String?)
 }
