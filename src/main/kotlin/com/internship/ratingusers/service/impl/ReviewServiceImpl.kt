@@ -4,23 +4,25 @@ import com.google.firebase.database.*
 import com.internship.ratingusers.model.Rating
 import com.internship.ratingusers.model.Review
 import com.internship.ratingusers.service.ReviewService
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.*
 
 
 @Service
 class ReviewServiceImpl : ReviewService {
+    private val logger: Logger = LoggerFactory.getLogger(ReviewService::class.java)
 
     var userRef: DatabaseReference = FirebaseDatabase.getInstance().getReference("users")
     var reviewsRef: DatabaseReference = FirebaseDatabase.getInstance().getReference("reviews")
     override fun review(userId: String, review: Review) {
         review.reviewId = reviewsRef.push().key
         reviewsRef.child(userId).child(review.reviewId).setValue(review) { databaseError: DatabaseError?, databaseReference: DatabaseReference? ->
-            if (Objects.nonNull(databaseError)) {
-                println("Data could not be saved. ${databaseError?.message}")
+            if (databaseError != null) {
+                logger.error("Data could not be saved: {}", databaseError.message)
             } else {
                 addUserRating(userId, review.rating!!)
-                println("Data saved successfully at ${databaseReference?.path}")
+                logger.info("Review saved successfully at {}", databaseReference?.path)
             }
         }
     }
@@ -29,20 +31,23 @@ class ReviewServiceImpl : ReviewService {
         val reviewToDeleteRef: DatabaseReference = reviewsRef.child(userId).child(reviewId)
         reviewToDeleteRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
-                val review: Review? = dataSnapshot?.getValue(Review::class.java)
-                subtractUserRating(userId, review?.rating!!)
-                reviewToDeleteRef.removeValueAsync()
-                println("Data deleted successfully")
+                val review: Review? = dataSnapshot.getValue(Review::class.java)
+                if (review != null) {
+                    subtractUserRating(userId, review.rating!!)
+                    reviewToDeleteRef.removeValueAsync()
+                    logger.info("Review deleted successfully for review ID: {}", reviewId)
+                } else {
+                    logger.warn("Review not found for user ID: {} and review ID: {}", userId, reviewId)
+                }
             }
 
             override fun onCancelled(databaseError: DatabaseError) {
-                println("The read failed: " + databaseError.code)
+                logger.error("The read failed: {}", databaseError.message)
             }
         })
     }
 
     private fun addUserRating(userId: String, addRating: Int) {
-        // Update the user's rating using a transaction
         userRef.child(userId).child("rating").runTransaction(object : Transaction.Handler {
             override fun doTransaction(currentData: MutableData): Transaction.Result {
                 if (currentData.value == null) {
@@ -61,10 +66,9 @@ class ReviewServiceImpl : ReviewService {
 
             override fun onComplete(error: DatabaseError?, committed: Boolean, currentData: DataSnapshot?) {
                 if (committed) {
-                    println("Data saved successfully")
+                    logger.info("User rating updated successfully for user ID: {}", userId)
                 } else {
-                    // Handle the error
-                    println("Data could not be saved. ${error?.message}")
+                    logger.error("User rating could not be updated: {}", error?.message)
                 }
             }
         })
@@ -89,10 +93,9 @@ class ReviewServiceImpl : ReviewService {
 
             override fun onComplete(error: DatabaseError?, committed: Boolean, currentData: DataSnapshot?) {
                 if (committed) {
-                    println("Data deleted successfully")
+                    logger.info("User rating updated successfully for user ID: {}", userId)
                 } else {
-                    // Handle the error
-                    println("Data could not be saved. ${error?.message}")
+                    logger.error("User rating could not be updated: {}", error?.message)
                 }
             }
         })
