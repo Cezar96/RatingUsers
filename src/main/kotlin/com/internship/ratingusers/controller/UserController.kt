@@ -6,13 +6,14 @@ import com.internship.ratingusers.service.ReviewService
 import com.internship.ratingusers.service.UserService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 
 @RestController
 class UserController(private val userService: UserService,
                      private val reviewService: ReviewService) {
 
-    @PostMapping(value = ["/users"])
+    @PostMapping(value = ["/register"])
     fun register(@RequestBody registrationForm: RegistrationForm): ResponseEntity<*>? {
         userService.register(registrationForm.email, registrationForm.password)
         return ResponseEntity<Any>(HttpStatus.CREATED)
@@ -30,6 +31,7 @@ class UserController(private val userService: UserService,
         reviewService.review(userId, review)
         return ResponseEntity<Any>(HttpStatus.OK)
     }
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
     @DeleteMapping(value = ["/users/{userId}/reviews/{reviewId}"])
     fun removeReview(@PathVariable userId: String,@PathVariable reviewId:String): ResponseEntity<*>? {
         reviewService.deleteReview(userId, reviewId)

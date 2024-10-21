@@ -23,7 +23,7 @@ class UserServiceImpl : UserService {
             val userRecord = FirebaseAuth.getInstance().createUser(request)
             writeToDatabase(userRecord)
         } catch (e: FirebaseAuthException) {
-            throw RuntimeException(e)
+            throw FirebaseAuthException(e)
         }
     }
 
