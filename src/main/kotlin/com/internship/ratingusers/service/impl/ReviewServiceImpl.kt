@@ -6,15 +6,20 @@ import com.internship.ratingusers.model.Review
 import com.internship.ratingusers.service.ReviewService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 
 
 @Service
-class ReviewServiceImpl : ReviewService {
+class ReviewServiceImpl(
+       firebaseDatabase: FirebaseDatabase
+) : ReviewService {
     private val logger: Logger = LoggerFactory.getLogger(ReviewService::class.java)
 
-    var userRef: DatabaseReference = FirebaseDatabase.getInstance().getReference("users")
-    var reviewsRef: DatabaseReference = FirebaseDatabase.getInstance().getReference("reviews")
+    var userRef: DatabaseReference = firebaseDatabase.getReference("users")
+    var reviewsRef: DatabaseReference = firebaseDatabase.getReference("reviews")
+
+
     override fun review(userId: String, review: Review) {
         review.reviewId = reviewsRef.push().key
         reviewsRef.child(userId).child(review.reviewId).setValue(review) { databaseError: DatabaseError?, databaseReference: DatabaseReference? ->
@@ -47,7 +52,7 @@ class ReviewServiceImpl : ReviewService {
         })
     }
 
-    private fun addUserRating(userId: String, addRating: Int) {
+    fun addUserRating(userId: String, addRating: Int) {
         userRef.child(userId).child("rating").runTransaction(object : Transaction.Handler {
             override fun doTransaction(currentData: MutableData): Transaction.Result {
                 if (currentData.value == null) {
@@ -74,7 +79,7 @@ class ReviewServiceImpl : ReviewService {
         })
     }
 
-    private fun subtractUserRating(userId: String, subtractRating: Int) {
+    fun subtractUserRating(userId: String, subtractRating: Int) {
         userRef.child(userId).child("rating").runTransaction(object : Transaction.Handler {
             override fun doTransaction(currentData: MutableData): Transaction.Result {
                 if (currentData.value == null) {
